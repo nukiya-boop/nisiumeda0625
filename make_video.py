@@ -1,15 +1,18 @@
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 import os
+import unicodedata
 
 BASE = '/home/user/nisiumeda0625/images/'
 OUT  = '/home/user/nisiumeda0625/output_video.mp4'
 
 FONT_PATH = '/usr/share/fonts/opentype/ipafont-gothic/ipagp.ttf'
 
-W, H = 1920, 1080
+# Instagram縦型
+W, H = 1080, 1920
 FPS  = 30
+TOTAL_SEC = 30
 
 # 使用画像（料理系のみ）
 IMAGE_FILES = [
@@ -22,58 +25,62 @@ IMAGE_FILES = [
     '単体_長物尽くし懐石（ふうりん）_0005.jpg',
 ]
 
-# 各シーンの設定 [画像index, テロップ行リスト, 表示時間(秒)]
+# 各シーン：画像index / テロップ[(text, size, pos)] / 表示秒
+# 計30秒になるよう設定
 SCENES = [
     {
         'img': 0,
         'telops': [
-            ('季節限定', 90, 'top'),
-            ('職人の技', 120, 'bottom_big'),
+            ('季節限定', 80, 'tag'),
+            ('職人の技', 130, 'center_big'),
+            ('鰻・鱧　夏の傑作コース', 52, 'center_sub'),
         ],
-        'duration': 4,
+        'duration': 5,
     },
     {
         'img': 4,  # 鰻穴子重
         'telops': [
-            ('鰻の焼き', 80, 'top'),
-            ('炭火でじっくり、丁寧に焼き上げた', 50, 'bottom'),
-            ('職人の一品', 70, 'bottom2'),
+            ('鰻の焼き', 90, 'tag'),
+            ('炭火でじっくり', 70, 'bottom_line1'),
+            ('丁寧に焼き上げた職人の一品', 52, 'bottom_line2'),
         ],
-        'duration': 4,
+        'duration': 5,
     },
     {
         'img': 1,
         'telops': [
-            ('鱧の湯引き', 80, 'top'),
-            ('繊細な包丁さばきで仕上げる', 50, 'bottom'),
-            ('夏の風物詩', 70, 'bottom2'),
+            ('鱧の湯引き', 90, 'tag'),
+            ('繊細な包丁さばきで仕上げる', 55, 'bottom_line1'),
+            ('夏の風物詩', 70, 'bottom_line2'),
         ],
-        'duration': 4,
+        'duration': 5,
     },
     {
         'img': 5,  # 懐石造里
         'telops': [
-            ('職人の目利き', 80, 'top'),
-            ('旬の素材を厳選', 60, 'bottom'),
+            ('職人の目利き', 90, 'tag'),
+            ('市場で選び抜いた', 65, 'bottom_line1'),
+            ('旬の鮮魚を余すことなく', 55, 'bottom_line2'),
         ],
-        'duration': 4,
+        'duration': 5,
     },
     {
         'img': 6,  # 長物尽くし懐石
         'telops': [
-            ('旬のコース料理', 80, 'top'),
-            ('職人の技、職人の目利きで選んだ', 48, 'bottom'),
-            ('旬のものを使ったコース料理です', 48, 'bottom2'),
+            ('旬のコース料理', 90, 'tag'),
+            ('職人の技と目利きで選んだ', 55, 'bottom_line1'),
+            ('旬のものを使ったコース料理です', 52, 'bottom_line2'),
         ],
         'duration': 5,
     },
     {
         'img': 2,
         'telops': [
-            ('季節限定', 90, 'top'),
-            ('一期一会のひと皿を', 60, 'bottom'),
+            ('季節限定', 80, 'tag'),
+            ('一期一会のひと皿を', 70, 'bottom_line1'),
+            ('ぜひご賞味ください', 60, 'bottom_line2'),
         ],
-        'duration': 4,
+        'duration': 5,
     },
 ]
 
@@ -82,10 +89,10 @@ TRANSITION_FRAMES = FPS  # 1秒クロスフェード
 
 def load_img(path):
     img = Image.open(path).convert('RGB')
-    # クロップ中央 16:9
     iw, ih = img.size
     target_ratio = W / H
     img_ratio = iw / ih
+    # 縦型にトリミング（中央）
     if img_ratio > target_ratio:
         new_w = int(ih * target_ratio)
         x = (iw - new_w) // 2
@@ -98,8 +105,14 @@ def load_img(path):
     return img
 
 
+def alpha_overlay(img, rect, color_rgba):
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    od.rectangle(rect, fill=color_rgba)
+    return Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+
+
 def draw_telop(base_img, telops):
-    """テロップ描画"""
     img = base_img.copy()
     draw = ImageDraw.Draw(img)
 
@@ -108,97 +121,88 @@ def draw_telop(base_img, telops):
         bbox = draw.textbbox((0, 0), text, font=font)
         tw = bbox[2] - bbox[0]
         th = bbox[3] - bbox[1]
+        cx = (W - tw) // 2
 
-        if pos == 'top':
-            x = (W - tw) // 2
-            y = 60
-
-            # 帯背景
-            pad = 20
-            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-            od = ImageDraw.Draw(overlay)
-            od.rectangle(
-                [x - pad, y - pad, x + tw + pad, y + th + pad],
-                fill=(180, 20, 20, 200)
-            )
-            img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        if pos == 'tag':
+            # 上部の赤帯タグ
+            pad_x, pad_y = 30, 15
+            y = 80
+            img = alpha_overlay(img,
+                [cx - pad_x, y - pad_y, cx + tw + pad_x, y + th + pad_y],
+                (180, 20, 20, 220))
             draw = ImageDraw.Draw(img)
-            draw.text((x, y), text, font=font, fill=(255, 255, 255))
+            draw.text((cx, y), text, font=font, fill=(255, 255, 255))
 
-        elif pos == 'bottom_big':
-            size2 = size
-            font2 = ImageFont.truetype(FONT_PATH, size2)
-            bbox2 = draw.textbbox((0, 0), text, font=font2)
-            tw2 = bbox2[2] - bbox2[0]
-            th2 = bbox2[3] - bbox2[1]
-            x = (W - tw2) // 2
-            y = H - th2 - 80
-
-            # 縦書き風の装飾ライン
-            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-            od = ImageDraw.Draw(overlay)
-            od.rectangle([0, y - 30, W, H], fill=(0, 0, 0, 160))
-            img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        elif pos == 'center_big':
+            # 画面中央の大テキスト
+            y = H // 2 - th - 10
+            # 縦帯
+            img = alpha_overlay(img,
+                [0, y - 30, W, y + th + 30],
+                (0, 0, 0, 170))
             draw = ImageDraw.Draw(img)
-            # 影
-            draw.text((x + 3, y + 3), text, font=font2, fill=(0, 0, 0, 180))
-            draw.text((x, y), text, font=font2, fill=(255, 240, 180))
+            draw.text((cx + 3, y + 3), text, font=font, fill=(0, 0, 0))
+            draw.text((cx, y), text, font=font, fill=(255, 240, 180))
 
-        elif pos == 'bottom':
-            x = (W - tw) // 2
-            y = H - th - 130
-            overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-            od = ImageDraw.Draw(overlay)
-            od.rectangle([0, H - 200, W, H], fill=(0, 0, 0, 150))
-            img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        elif pos == 'center_sub':
+            y = H // 2 + 20
             draw = ImageDraw.Draw(img)
-            draw.text((x, y), text, font=font, fill=(255, 255, 255))
+            draw.text((cx + 2, y + 2), text, font=font, fill=(0, 0, 0))
+            draw.text((cx, y), text, font=font, fill=(255, 255, 255))
 
-        elif pos == 'bottom2':
-            x = (W - tw) // 2
-            y = H - th - 50
-            draw.text((x, y), text, font=font, fill=(255, 240, 180))
+        elif pos == 'bottom_line1':
+            y = H - 260
+            img = alpha_overlay(img,
+                [0, H - 320, W, H],
+                (0, 0, 0, 160))
+            draw = ImageDraw.Draw(img)
+            draw.text((cx, y), text, font=font, fill=(255, 255, 255))
+
+        elif pos == 'bottom_line2':
+            y = H - 150
+            draw = ImageDraw.Draw(img)
+            draw.text((cx + 2, y + 2), text, font=font, fill=(0, 0, 0))
+            draw.text((cx, y), text, font=font, fill=(255, 240, 180))
 
     return img
 
 
-def img_to_frames(pil_img):
+def img_to_frame(pil_img):
     arr = np.array(pil_img)
     return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
 
 # ---- メイン ----
+raw_files = [f for f in os.listdir(BASE) if f.endswith('.jpg')]
+nfc_map = {unicodedata.normalize('NFC', f): os.path.join(BASE, f) for f in raw_files}
+
+def get_path(name):
+    return nfc_map[unicodedata.normalize('NFC', name)]
+
+print("画像読み込み中...")
+images = [load_img(get_path(f)) for f in IMAGE_FILES]
+
+print("動画生成中...")
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 writer = cv2.VideoWriter(OUT, fourcc, FPS, (W, H))
 
-import os, unicodedata
-raw_files = [f for f in os.listdir(BASE) if f.endswith('.jpg')]
-# NFCに正規化してマッチング
-nfc_map = {unicodedata.normalize('NFC', f): os.path.join(BASE, f) for f in raw_files}
-def get_path(name):
-    key = unicodedata.normalize('NFC', name)
-    return nfc_map[key]
-images = [load_img(get_path(IMAGE_FILES[i])) for i in range(len(IMAGE_FILES))]
+prev_composed = None
 
-prev_frame_img = None
-
-for scene_idx, scene in enumerate(SCENES):
-    img_base = images[scene['img']]
-    composed = draw_telop(img_base, scene['telops'])
-
+for scene in SCENES:
+    composed = draw_telop(images[scene['img']], scene['telops'])
     total_frames = int(scene['duration'] * FPS)
 
     for f in range(total_frames):
-        # フェードイン
-        if f < TRANSITION_FRAMES and prev_frame_img is not None:
+        if f < TRANSITION_FRAMES and prev_composed is not None:
             alpha = f / TRANSITION_FRAMES
-            blended = Image.blend(prev_frame_img, composed, alpha)
-            frame = img_to_frames(blended)
+            blended = Image.blend(prev_composed, composed, alpha)
+            frame = img_to_frame(blended)
         else:
-            frame = img_to_frames(composed)
+            frame = img_to_frame(composed)
         writer.write(frame)
 
-    prev_frame_img = composed
+    prev_composed = composed
 
 writer.release()
-print(f"Done: {OUT}")
+total = sum(s['duration'] for s in SCENES)
+print(f"完成: {OUT}  ({total}秒 / {W}x{H})")
