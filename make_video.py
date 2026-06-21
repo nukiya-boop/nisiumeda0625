@@ -33,10 +33,10 @@ SCENES = [
     {
         'img': 0,
         'telops': [
-            {'text': '季節限定',                     'style': 'badge',    'y_ratio': 0.08},
-            {'text': '職　人　の　技',                'style': 'main',     'y_ratio': 0.30},
-            {'text': '鰻・鱧　夏の傑作コース',         'style': 'sub',      'y_ratio': 0.40},
-            {'text': '── 2026 Summer ──',           'style': 'caption',  'y_ratio': 0.45},
+            {'text': '季節限定',                     'style': 'badge',    'y_ratio': 0.04},
+            {'text': '職　人　の　技',                'style': 'main',     'y_ratio': 0.12},
+            {'text': '鰻・鱧　夏の傑作コース',         'style': 'sub',      'y_ratio': 0.72},
+            {'text': '── 2026 Summer ──',           'style': 'caption',  'y_ratio': 0.79},
         ],
         'duration': 5, 'zoom': 0.06,
     },
@@ -83,10 +83,10 @@ SCENES = [
     {
         'img': 2,
         'telops': [
-            {'text': '季節限定',                     'style': 'badge',    'y_ratio': 0.08},
-            {'text': '一期一会のひと皿を',             'style': 'main',     'y_ratio': 0.30},
-            {'text': 'ぜひご賞味ください',             'style': 'sub',      'y_ratio': 0.40},
-            {'text': '── ご予約お待ちしております ──', 'style': 'caption',  'y_ratio': 0.45},
+            {'text': '季節限定',                     'style': 'badge',    'y_ratio': 0.04},
+            {'text': '一期一会のひと皿を',             'style': 'main',     'y_ratio': 0.12},
+            {'text': 'ぜひご賞味ください',             'style': 'sub',      'y_ratio': 0.72},
+            {'text': '── ご予約お待ちしております ──', 'style': 'caption',  'y_ratio': 0.79},
         ],
         'duration': 5, 'zoom': 0.06,
     },
