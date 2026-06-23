@@ -148,37 +148,38 @@ def draw_telop_frame(base_img, telops, telop_alpha):
         text  = t['text']
         style = t['style']
         yr    = t['y_ratio']
+        talpha = t.get('_alpha', telop_alpha)
 
         if style == 'main':
             size = 72
             font = ImageFont.truetype(FONT_PATH_BOLD, size)
             color = (255, 248, 220)   # クリーム
             shadow = (60, 30, 0)
-            draw_text_with_line(img, text, font, yr, color, shadow, telop_alpha,
+            draw_text_with_line(img, text, font, yr, color, shadow, talpha,
                                 line_color=(200, 160, 80), line_thickness=2)
 
         elif style == 'sub':
             size = 46
             font = ImageFont.truetype(FONT_PATH, size)
             color = (240, 240, 240)
-            draw_text_simple(img, text, font, yr, color, (0, 0, 0), telop_alpha)
+            draw_text_simple(img, text, font, yr, color, (0, 0, 0), talpha)
 
         elif style == 'caption':
             size = 28
             font = ImageFont.truetype(FONT_PATH, size)
             color = (180, 160, 100)
-            draw_text_simple(img, text, font, yr, color, (0, 0, 0), telop_alpha)
+            draw_text_simple(img, text, font, yr, color, (0, 0, 0), talpha)
 
         elif style == 'badge':
             size = 52
             font = ImageFont.truetype(FONT_PATH_BOLD, size)
-            draw_badge(img, text, font, yr, telop_alpha)
+            draw_badge(img, text, font, yr, talpha)
 
         elif style == 'accent':
             size = 44
             font = ImageFont.truetype(FONT_PATH, size)
             color = (255, 210, 80)
-            draw_text_simple(img, text, font, yr, color, (0, 0, 0), telop_alpha)
+            draw_text_simple(img, text, font, yr, color, (0, 0, 0), talpha)
 
     return img.convert('RGB')
 
@@ -263,20 +264,41 @@ for si, scene in enumerate(SCENES):
     total_frames = int(scene['duration'] * FPS)
     scene_frames = []
 
+    telops = scene['telops']
+    # 各テロップの文字起こし開始フレームを計算（0.5秒後から順番に）
+    char_per_frame = 1.5   # 1フレームあたりの表示文字数
+    fade_start = int(FPS * 0.5)
+    telop_starts = []
+    cursor = fade_start
+    for t in telops:
+        telop_starts.append(cursor)
+        cursor += int(len(t['text']) / char_per_frame) + int(FPS * 0.2)
+    fade_out_start = total_frames - TELOP_FADE
+
     for f in range(total_frames):
         progress = f / total_frames
         kb_img = ken_burns(base_img, front_rect, progress, scene['zoom'])
 
-        # テロップのフェードイン（開始0.5秒後から）
-        fade_start = int(FPS * 0.5)
-        if f < fade_start:
-            talpha = 0.0
-        elif f < fade_start + TELOP_FADE:
-            talpha = (f - fade_start) / TELOP_FADE
+        # フェードアウト
+        if f >= fade_out_start:
+            global_alpha = 1.0 - (f - fade_out_start) / TELOP_FADE
         else:
-            talpha = 1.0
+            global_alpha = 1.0
 
-        composed = draw_telop_frame(kb_img, scene['telops'], talpha)
+        # 各テロップに文字起こし＋フェードイン適用
+        partial_telops = []
+        for ti, t in enumerate(telops):
+            ts = telop_starts[ti]
+            elapsed = f - ts
+            if elapsed < 0:
+                continue  # まだ表示しない
+            n_chars = int(elapsed * char_per_frame)
+            shown_text = t['text'][:max(1, n_chars)]
+            # フェードイン（最初の数フレーム）
+            char_alpha = min(1.0, elapsed / TELOP_FADE) * global_alpha
+            partial_telops.append({**t, 'text': shown_text, '_alpha': char_alpha})
+
+        composed = draw_telop_frame(kb_img, partial_telops, 1.0)
         scene_frames.append(composed)
 
     # クロスフェード書き出し
