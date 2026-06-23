@@ -35,7 +35,7 @@ SCENES = [
         'telops': [
             {'text': '季節限定',                     'style': 'badge',    'y_ratio': 0.04},
             {'text': '職　人　の　技',                'style': 'main',     'y_ratio': 0.12},
-            {'text': 'ふうりん',                      'style': 'sub',      'y_ratio': 0.72},
+            {'text': 'ふうりん',                      'style': 'accent',   'y_ratio': 0.72},
             {'text': '── 2026 Summer ──',           'style': 'caption',  'y_ratio': 0.79},
         ],
         'duration': 5, 'zoom': 0.06,
@@ -175,10 +175,11 @@ def draw_telop_frame(base_img, telops, telop_alpha):
             draw_badge(img, text, font, yr, telop_alpha)
 
         elif style == 'accent':
-            size = 44
-            font = ImageFont.truetype(FONT_PATH, size)
-            color = (255, 210, 80)
-            draw_text_simple(img, text, font, yr, color, (0, 0, 0), telop_alpha)
+            size = 68
+            font = ImageFont.truetype(FONT_PATH_BOLD, size)
+            color = (255, 220, 80)
+            draw_text_with_line(img, text, font, yr, color, (60, 30, 0), telop_alpha,
+                                line_color=(200, 160, 80), line_thickness=2)
 
     return img.convert('RGB')
 
