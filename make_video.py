@@ -45,7 +45,7 @@ SCENES = [
         'telops': [
             {'text': '鰻　の　焼　き',                'style': 'main',     'y_ratio': 0.10},
             {'text': 'Grilled Eel',                  'style': 'caption',  'y_ratio': 0.18},
-            {'text': 'でじっくり、丁寧に焼き上げた',    'style': 'sub',      'y_ratio': 0.74},
+            {'text': 'じっくり、丁寧に焼き上げた',      'style': 'sub',      'y_ratio': 0.74},
             {'text': '職人の一品',                    'style': 'accent',   'y_ratio': 0.80},
         ],
         'duration': 5, 'zoom': 0.05,
