@@ -65,7 +65,7 @@ SCENES = [
         'telops': [
             {'text': '職人の目利き',                  'style': 'main',     'y_ratio': 0.10},
             {'text': "Chef's Selection",              'style': 'caption',  'y_ratio': 0.18},
-            {'text': '市場で選び抜いた旬の鮮魚',        'style': 'sub',      'y_ratio': 0.74},
+            {'text': '選び抜いた旬の鮮魚',              'style': 'sub',      'y_ratio': 0.74},
             {'text': '四種盛り合わせ',                 'style': 'accent',   'y_ratio': 0.80},
         ],
         'duration': 5, 'zoom': 0.05,
